@@ -1,0 +1,2 @@
+#!/bin/sh
+systemctl --user stop stop-show-session.target

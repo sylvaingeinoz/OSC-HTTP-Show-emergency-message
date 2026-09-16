@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<labwc_config>
+  <core><gap>0</gap><decoration>server</decoration></core>
+  <theme><name>StopShow</name><cornerRadius>0</cornerRadius><keepBorder>no</keepBorder></theme>
+  <desktops number="1"><popupTime>0</popupTime></desktops>
+  <keyboard/>
+  <mouse/>
+  <windowRules>
+    <windowRule identifier="*" serverDecoration="no"/>
+  </windowRules>
+</labwc_config>
