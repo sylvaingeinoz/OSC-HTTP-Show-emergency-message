@@ -7,7 +7,7 @@
 3. **Session dédiée** : labwc lit `/etc/stop-show/labwc`, sans autostart du bureau Raspberry Pi. Ni barre de tâches, ni gestionnaire de fichiers, ni serveur de notifications, ni économiseur d’écran n’est lancé. Un fond noir est créé par swaybg.
 4. **Curseur** : thème Xcursor transparent chargé avant le lancement du compositeur, complété par `cursor: none` dans l’écran de scène.
 5. **Navigateur** : Chromium en kiosque avec profil temporaire neuf à chaque lancement, sans première visite ni restauration d’une session interrompue. Le profil est nettoyé à sa fermeture et le répertoire runtime disparaît au redémarrage.
-6. **Page locale noire** : le kiosque ouvre le fichier local d’affichage, qui interroge le service en boucle. Une panne ou lenteur HTTP ne conduit pas à une page d’erreur du navigateur : l’écran reste noir. Seule la lecture de l’état public possède un en-tête CORS autorisant cette page locale ; les commandes conservent leur authentification.
+6. **Page locale noire** : le kiosque ouvre le fichier local d’affichage, qui interroge le service en boucle. Une panne ou lenteur HTTP ne conduit pas à une page d’erreur du navigateur : l’écran reste noir. Seule la lecture de l’état public possède un en-tête CORS autorisant cette page locale ; les commandes sont accessibles sans clé sur le réseau de régie.
 7. **Relance** : systemd relance le serveur et Chromium après leur arrêt. Le lanceur de session relance labwc après sa sortie. À chaque démarrage complet, LightDM recrée la session puis démarre le service et le kiosque.
 
 L’application reste au noir jusqu’à réception d’une consigne valide. Elle ne réaffiche pas une consigne ancienne après un redémarrage.
@@ -15,7 +15,7 @@ L’application reste au noir jusqu’à réception d’une consigne valide. Ell
 ## Fichiers et supervision
 
 - Application : `~/.local/share/stop-show/app`
-- Clé et réglages persistants : `~/.local/share/stop-show/data`
+- Réglages persistants : `~/.local/share/stop-show/data`
 - Session système : `/usr/share/wayland-sessions/stop-show.desktop`
 - Lanceur graphique : `/usr/local/bin/stop-show-desktop`
 - Paramètres de session : `/etc/stop-show/labwc`
@@ -47,7 +47,7 @@ bash ~/.local/share/stop-show/app/pi/restore-desktop.sh
 sudo reboot
 ```
 
-Le script restaure les fichiers système sauvegardés lors de la première installation 1.1 et retire ceux ajoutés pour la session dédiée. Il conserve l’application, la clé, les réglages et les sauvegardes. Les modifications système faites manuellement sur ces mêmes fichiers après l’installation seront remplacées par la sauvegarde initiale : en garder une copie si nécessaire. LightDM reste activé et la cible de démarrage reste graphique.
+Le script restaure les fichiers système sauvegardés lors de la première installation 1.1 et retire ceux ajoutés pour la session dédiée. Il conserve l’application, les réglages et les sauvegardes. Les modifications système faites manuellement sur ces mêmes fichiers après l’installation seront remplacées par la sauvegarde initiale : en garder une copie si nécessaire. LightDM reste activé et la cible de démarrage reste graphique.
 
 Si SSH est indisponible, monter la carte sur un autre système Linux et restaurer les fichiers sauvegardés depuis `var/lib/stop-show-install/files` selon le manifeste `manifest.json`. Les fichiers dont la valeur du manifeste est `null` ont été créés par l’installateur et peuvent être retirés. Réparer d’abord le réseau ou la configuration du démarrage avant de reprendre l’exploitation.
 

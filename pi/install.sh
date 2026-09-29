@@ -24,7 +24,7 @@ sudo -v
 sudo apt-get update
 sudo apt-get install -y python3 chromium labwc swaybg wlr-randr fonts-dejavu-core
 mkdir -p "$install_dir/static" "$install_dir/pi/labwc" "$HOME/.config/systemd/user" "$HOME/.local/bin"
-# Garder la clé et les réglages hors du code mis à jour.
+# Garder les réglages hors du code mis à jour.
 cp "$source_dir/server.py" "$install_dir/server.py"
 cp "$source_dir/static/"* "$install_dir/static/"
 cp "$source_dir/pi/"*.sh "$source_dir/pi/configure_pi.py" "$install_dir/pi/"
@@ -91,5 +91,5 @@ sudo systemctl enable lightdm.service
 sudo systemctl set-default graphical.target
 printf '\nInstallation terminée. Après sudo reboot, STOP SHOW se lancera automatiquement.\n'
 printf 'Régie : http://%s.local:8080 (ou IP du Pi).\n' "$(hostname)"
-printf 'Clé : cat ~/.local/share/stop-show/data/token\n'
+printf 'La régie est accessible directement, sans connexion.\n'
 printf 'Restauration du bureau : bash ~/.local/share/stop-show/app/pi/restore-desktop.sh\n'

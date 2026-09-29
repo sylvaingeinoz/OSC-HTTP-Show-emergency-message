@@ -13,4 +13,4 @@ jobs:
       - name: Tests du service et de l’installation
         run: python3 -m unittest discover -s tests -v
       - name: Syntaxe des lanceurs
-        run: for script in install.sh pi/*.sh pi/labwc/autostart pi/labwc/shutdown; do bash -n "$script"; done
+        run: for script in install.sh update.sh pi/*.sh pi/labwc/autostart pi/labwc/shutdown; do bash -n "$script"; done

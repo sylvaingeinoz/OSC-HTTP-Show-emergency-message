@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Client OSC de test sans dépendance. Voir COMPANION.md."""
 import argparse
-from pathlib import Path
 import socket
 import struct
 
@@ -17,10 +16,8 @@ def main():
     p.add_argument('address', choices=['/show/' + m for m in ('text', 'stop', 'black', 'clock', 'timer', 'countdown', 'test', 'keepalive')])
     p.add_argument('value', nargs='?')
     p.add_argument('--port', type=int, default=9000)
-    p.add_argument('--token-file', required=True)
     args = p.parse_args()
-    key = Path(args.token_file).read_text().strip()
-    tags, payload = ',s', string(key)
+    tags, payload = ',', b''
     if args.value is not None:
         if args.address == '/show/timer':
             tags += 'f'

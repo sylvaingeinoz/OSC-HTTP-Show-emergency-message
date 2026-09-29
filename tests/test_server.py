@@ -44,10 +44,9 @@ class CoreTests(unittest.TestCase):
         self.hw = Hardware()
         self.app = App(self.tmp.name, hardware=self.hw, mono=lambda: self.now, wall=lambda: self.wall)
     def tearDown(self): self.tmp.cleanup()
-    def test_boot_black_and_private_token(self):
+    def test_boot_black_without_token(self):
         self.assertEqual(self.app.snapshot()['cue']['mode'], 'black')
-        self.assertEqual((Path(self.tmp.name) / 'token').stat().st_mode & 0o777, 0o600)
-        self.assertNotIn(self.app.token, json.dumps(self.app.snapshot()))
+        self.assertFalse((Path(self.tmp.name) / 'token').exists())
     def test_every_mode_expires_including_stop(self):
         for data in [dict(mode='text', text='Micro 2'), dict(mode='stop'), dict(mode='clock'), dict(mode='timer', seconds=60), dict(mode='countdown', target='2099-01-01T00:00:00+01:00'), dict(mode='test')]:
             self.app.command(data)
@@ -55,6 +54,37 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(self.app.snapshot()['cue']['mode'], data['mode'])
             self.now += .1
             self.assertEqual(self.app.snapshot()['cue']['mode'], 'black')
+    def test_zero_disables_timeout_for_all_cues(self):
+        self.app.configure({'off_time': 0})
+        for data in [dict(mode='stop'), dict(mode='text', text='REPRISE'), dict(mode='clock'), dict(mode='test'), dict(mode='timer', seconds=2), dict(mode='countdown', target='2099-01-01T00:00:00Z')]:
+            self.app.command(data)
+            self.now += 100000
+            state = self.app.snapshot()
+            self.assertEqual(state['cue']['mode'], data['mode'])
+            self.assertIsNone(state['remaining'])
+            self.app.command({'mode': 'keepalive'})
+            self.assertIsNone(self.app.snapshot()['remaining'])
+        self.app.command({'mode': 'black'})
+        self.assertEqual(self.app.snapshot()['cue']['mode'], 'black')
+    def test_zero_toggle_affects_live_cue_without_reviving_expired(self):
+        self.app.command({'mode': 'stop'})
+        self.now += 10
+        self.app.configure({'off_time': 0})
+        self.now += 1000
+        self.assertEqual(self.app.snapshot()['cue']['mode'], 'stop')
+        self.app.configure({'off_time': 5})
+        self.assertEqual(self.app.snapshot()['remaining'], 5)
+        self.now += 5
+        self.app.configure({'off_time': 0})
+        self.assertEqual(self.app.snapshot()['cue']['mode'], 'black')
+    def test_old_token_file_is_ignored_and_settings_preserved(self):
+        (Path(self.tmp.name) / 'token').write_text('ancienne-cle')
+        self.app.configure({'off_time': 0, 'indicator': True})
+        app = App(self.tmp.name)
+        self.assertEqual(app.config['off_time'], 0)
+        self.assertTrue(app.config['indicator'])
+        self.assertEqual(app.command({'mode': 'stop'})['cue']['mode'], 'stop')
+
     def test_identical_information_rearms(self):
         data = dict(mode='stop')
         self.app.command(data)
@@ -108,8 +138,7 @@ class CoreTests(unittest.TestCase):
         self.app.configure(dict(off_time=23, indicator=True, font='mono', timezone='UTC'))
         app2 = App(self.tmp.name)
         self.assertEqual(app2.config['off_time'], 23)
-        self.assertEqual(app2.token, self.app.token)
-        for value in [dict(off_time=0), dict(off_time=float('inf')), dict(indicator='false'), dict(size=900), dict(timezone='../UTC'), dict(font='custom'), dict(hdmi={})]:
+        for value in [dict(off_time=-1), dict(off_time=float('inf')), dict(indicator='false'), dict(size=900), dict(timezone='../UTC'), dict(font='custom'), dict(hdmi={})]:
             with self.assertRaises(ValueError): self.app.configure(value)
         self.assertEqual(self.app.config['off_time'], 23)
     def test_failed_write_does_not_change_config(self):
@@ -136,14 +165,13 @@ class CoreTests(unittest.TestCase):
         self.now += 21
         with self.assertRaises(ValueError): self.app.hdmi_confirm()
         self.assertIsNone(self.app.config['hdmi'])
-    def test_osc_commands_and_auth(self):
-        k = self.app.token
-        for address, args, mode in [('/show/text', (k, 'Léa → micro 2'), 'text'), ('/show/stop', (k,), 'stop'), ('/show/timer', (k, 30.5), 'timer'), ('/show/countdown', (k, '2099-01-01T00:00:00+01:00'), 'countdown'), ('/show/clock', (k,), 'clock'), ('/show/test', (k,), 'test'), ('/show/black', (k,), 'black')]:
+    def test_osc_commands_without_token(self):
+        for address, args, mode in [('/show/text', ('Léa → micro 2',), 'text'), ('/show/stop', (), 'stop'), ('/show/timer', (30.5,), 'timer'), ('/show/countdown', ('2099-01-01T00:00:00+01:00',), 'countdown'), ('/show/clock', (), 'clock'), ('/show/test', (), 'test'), ('/show/black', (), 'black')]:
             self.assertEqual(osc_command(self.app, osc(address, *args))['cue']['mode'], mode)
-        for packet in [osc('/show/stop', 'bad-key'), osc('/show/stop', k, 'STOP', 'extra'), osc('/show/unknown', k)]:
+        for packet in [osc('/show/text'), osc('/show/stop', 'STOP', 'extra'), osc('/show/unknown')]:
             with self.assertRaises(ValueError): osc_command(self.app, packet)
     def test_osc_malformed(self):
-        good = osc('/show/text', self.app.token, 'Bonjour')
+        good = osc('/show/text', 'Bonjour')
         for packet in [b'', b'#bundle\0' + b'\0' * 8, good[:-1], good + b'\0' * 4, b'/show/stop\0\0,f\0\0', osc('/elsewhere', 'test')]:
             with self.assertRaises((ValueError, UnicodeError)): decode_osc(packet)
     def test_output_parser_and_mode_allowlist(self):
@@ -179,21 +207,20 @@ class NetworkTests(unittest.TestCase):
     def tearDownClass(cls):
         for server in [cls.http, cls.udp]: server.shutdown(); server.server_close()
         cls.tmp.cleanup()
-    def request(self, path, data=None, token=None, content_type='application/json'):
+    def request(self, path, data=None, content_type='application/json'):
         headers = {'Content-Type': content_type}
-        if token: headers['Authorization'] = 'Bearer ' + token
         request = urllib.request.Request(self.base + path, data=None if data is None else json.dumps(data).encode(), headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=3) as response: return response.status, response.read()
         except urllib.error.HTTPError as e: return e.code, e.read()
-    def test_http_auth_and_delivery(self):
-        self.assertEqual(self.request('/api/command', {'mode': 'stop'})[0], 401)
-        self.assertEqual(self.request('/api/settings')[0], 401)
-        self.assertEqual(self.request('/api/command', {'mode': 'stop'}, self.app.token)[0], 200)
+    def test_http_direct_access_and_delivery(self):
+        self.assertEqual(self.request('/api/command', {'mode': 'stop'})[0], 200)
+        self.assertEqual(self.request('/api/settings')[0], 200)
+        self.assertEqual(self.request('/api/command', {'mode': 'stop'})[0], 200)
         state = json.loads(self.request('/api/state')[1])
         self.assertEqual(state['cue']['mode'], 'stop')
-        self.assertEqual(self.request('/api/command', {'mode': 'bad'}, self.app.token)[0], 400)
-        self.assertEqual(self.request('/api/command', {'mode': 'stop'}, self.app.token, 'text/plain')[0], 415)
+        self.assertEqual(self.request('/api/command', {'mode': 'bad'})[0], 400)
+        self.assertEqual(self.request('/api/command', {'mode': 'stop'}, 'text/plain')[0], 415)
     def test_local_kiosk_can_read_public_state_but_cors_does_not_open_commands(self):
         req = urllib.request.Request(self.base + '/api/state', headers={'Origin': 'null'})
         with urllib.request.urlopen(req, timeout=3) as response:
@@ -201,10 +228,9 @@ class NetworkTests(unittest.TestCase):
             self.assertIn('cue', json.loads(response.read()))
         req = urllib.request.Request(self.base + '/api/command', data=b'{"mode":"stop"}',
                                      headers={'Origin': 'null', 'Content-Type': 'application/json'})
-        with self.assertRaises(urllib.error.HTTPError) as err:
-            urllib.request.urlopen(req, timeout=3)
-        self.assertEqual(err.exception.code, 401)
-        self.assertIsNone(err.exception.headers.get('Access-Control-Allow-Origin'))
+        with urllib.request.urlopen(req, timeout=3) as response:
+            self.assertEqual(response.status, 200)
+            self.assertIsNone(response.headers.get('Access-Control-Allow-Origin'))
 
     def test_static_and_no_traversal(self):
         for path in ['/', '/display', '/admin.js', '/display.js', '/style.css']:
@@ -214,11 +240,11 @@ class NetworkTests(unittest.TestCase):
     def test_udp_delivery_and_rejection(self):
         import time
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.sendto(osc('/show/text', self.app.token, 'OSC vérifié'), self.udp.server_address)
+            s.sendto(osc('/show/text', 'OSC vérifié'), self.udp.server_address)
             limit = time.monotonic() + 2
             while self.app.osc_received == 0 and time.monotonic() < limit: time.sleep(.01)
             self.assertEqual(self.app.snapshot()['cue']['text'], 'OSC vérifié')
-            s.sendto(osc('/show/stop', 'wrong'), self.udp.server_address)
+            s.sendto(osc('/show/unknown'), self.udp.server_address)
             while self.app.osc_rejected == 0 and time.monotonic() < limit: time.sleep(.01)
             self.assertEqual(self.app.osc_rejected, 1)
 

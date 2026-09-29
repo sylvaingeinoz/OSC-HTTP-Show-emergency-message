@@ -2,7 +2,7 @@
 
 Un Raspberry Pi 5 derrière une télévision HDMI, piloté depuis une régie web ou **Bitfocus Companion en HTTP/OSC**. Interface en français, fonctionnement local, sans abonnement.
 
-**Version 1.1 — installation et démarrage dédiés.** Le Pi ouvre automatiquement l’afficheur à chaque démarrage. La session ne lance aucun bureau, panneau ou notification ; elle utilise un fond noir et un curseur transparent. Le navigateur repart avec un profil temporaire neuf, et son écran local reste noir si le service met du temps à démarrer. [Détails et limites du démarrage](DEMARRAGE.md).
+**Version 1.2 — accès direct, mire simplifiée et retour au noir désactivable.** Le Pi ouvre automatiquement l’afficheur à chaque démarrage. La session ne lance aucun bureau, panneau ou notification ; elle utilise un fond noir et un curseur transparent. Le navigateur repart avec un profil temporaire neuf, et son écran local reste noir si le service met du temps à démarrer. [Détails et limites du démarrage](DEMARRAGE.md).
 
 ## Installation sur le Pi
 
@@ -16,15 +16,25 @@ bash install-stop-show.sh
 sudo reboot
 ```
 
-Le script demande le mot de passe `sudo`, installe les composants, sauvegarde les fichiers système modifiés et active le démarrage automatique. Il est prévu pour **un Pi dédié à l’afficheur**. Il conserve les réglages et la clé lorsqu’il est relancé pour une mise à jour. Il ne modifie pas l’accès SSH. Le téléchargement et l’installation initiale nécessitent Internet ; l’exploitation fonctionne ensuite sur le réseau local.
+Le script demande le mot de passe `sudo`, installe les composants, sauvegarde les fichiers système modifiés et active le démarrage automatique. Il est prévu pour **un Pi dédié à l’afficheur**. Il conserve les réglages lorsqu’il est relancé pour une mise à jour. Il ne modifie pas l’accès SSH. Le téléchargement et l’installation initiale nécessitent Internet ; l’exploitation fonctionne ensuite sur le réseau local.
 
 Après le redémarrage :
 
 1. Ouvrir `http://stopshow.local:8080` depuis la régie (remplacer `stopshow` par le nom choisi ou l’IP du Pi).
-2. Lire la clé en SSH avec `cat ~/.local/share/stop-show/data/token`, puis la saisir dans la page.
-3. Envoyer la mire, vérifier le téléviseur, puis envoyer une consigne.
+2. Envoyer la mire, vérifier le téléviseur, puis envoyer une consigne.
 
 Le noir initial est normal : aucune consigne n’est affichée au démarrage.
+
+## Mise à jour d’un Pi déjà installé en version 1.1
+
+Dans SSH, avec le même compte que lors de l’installation, sans `sudo` :
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/sylvaingeinoz/OSC-HTTP-Show-emergency-message/main/update.sh -o update-stop-show.sh
+bash update-stop-show.sh
+```
+
+Le logiciel est sauvegardé puis remplacé. Les réglages, la sortie HDMI, le démarrage automatique et les accès SSH sont conservés. Aucun changement d’OS ni redémarrage du Pi n’est nécessaire. L’affichage est interrompu pendant la mise à jour et repart au noir ; la faire hors représentation, puis recharger la régie web. Une ancienne clé présente sur disque est ignorée.
 
 ### Installation depuis une copie Git
 
@@ -40,10 +50,10 @@ sudo reboot
 - Grandes consignes : changement de micro, reprise, **STOP SHOW rouge clignotant**.
 - Prompteur fixe multiligne, choix de police et de taille, texte ajusté à l’écran.
 - Heure, minuterie et compte à rebours vers une date/heure cible, dont minuit au Nouvel An.
-- Retour au noir configurable : **15 secondes par défaut**, réarmé par chaque nouvelle consigne. **STOP SHOW suit exactement ce même délai**, sans verrouillage.
+- Retour au noir configurable : **0 pour le désactiver ; 15 secondes par défaut**, réarmé par chaque nouvelle consigne. **STOP SHOW suit exactement ce même délai**, sans verrouillage.
 - Témoin discret optionnel restant visible au noir ; mire de préparation.
 - Résolution, fréquence, rotation 90°/180°/270° et miroirs via les modes réellement annoncés par la TV ; essai de 20 secondes avec retour arrière sans confirmation.
-- HTTP TCP 8080 et OSC UDP 9000, commandes protégées par une clé.
+- HTTP TCP 8080 et OSC UDP 9000, accès direct sans clé ni connexion sur le réseau de régie.
 
 L’heure, les compteurs et la mire suivent également le délai au noir. La commande `keepalive` prolonge la consigne visible sans redémarrer le compteur. [Exemples Companion](COMPANION.md).
 

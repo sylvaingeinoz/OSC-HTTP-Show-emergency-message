@@ -1,4 +1,6 @@
-# Validation — versions 1.0 et 1.1
+# Validation — versions 1.0 à 1.2
+
+Les sections 1.0 et 1.1 ci-dessous décrivent les essais historiques, avant suppression de la clé en 1.2.
 
 ## Réalisé localement le 15 septembre 2026
 
@@ -66,6 +68,19 @@ Le contrôle intégré du navigateur interdit les URL `file://` : le chargement 
 
 Une configuration GitHub Actions exécute la suite Python et le contrôle de syntaxe à chaque publication. Son résultat distant est à consulter dans l’onglet Actions du dépôt.
 
+## Version 1.2 — 29 septembre 2026
+
+**35 tests automatisés réussis**, avec échanges HTTP/UDP réels locaux. Syntaxe de chaque script Bash vérifiée.
+
+- Accès direct à la régie, aux commandes et aux réglages sans clé ; ancien fichier de clé ignoré, réglages conservés.
+- OSC sans premier argument de clé ; contrôle des arguments invalides.
+- `off_time=0` : tous les modes restent actifs, STOP SHOW compris ; bascule pendant une consigne, réactivation d’un délai positif, noir immédiat et aucune résurrection d’une consigne expirée.
+- Mise à jour simulée d’une installation : réglages et services inchangés, sauvegarde du code antérieur, restauration en cas d’échec du remplacement.
+- Navigateur : régie directement accessible, enregistrement de 0, STOP SHOW toujours visible au-delà de 15 secondes et état « Retour au noir désactivé ». Noir manuel vérifié, puis extinction après réactivation d’un délai positif.
+- Mire contrôlée visuellement à 1280 × 720 : cadre, croix centrale, trois plages de gris et repères discrets.
+
+La mise à jour sur un vrai Pi, la page locale du kiosque et le signal HDMI restent à vérifier sur place. Le délai 0 ne désactive pas le noir en cas de perte du service.
+
 ## Non validé faute de matériel
 
 - Installation des paquets sur l’image Raspberry Pi OS réellement choisie.
@@ -79,11 +94,11 @@ Une configuration GitHub Actions exécute la suite Python et le contrôle de syn
 ## Recette à réaliser avant une représentation
 
 1. Installer depuis Imager et démarrer avec TV branchée, sans clavier. Vérifier accès SSH et régie web après redémarrage.
-2. Envoyer la mire, vérifier bords, sens, cercle, couleurs, absence de zoom et de veille TV. Confirmer une résolution/fréquence supportée.
+2. Envoyer la mire, vérifier bords, sens, croix centrale et plages de gris, absence de zoom et de veille TV. Confirmer une résolution/fréquence supportée.
 3. Essayer 90°, 180°, 270° et les miroirs utiles. Tester le retour arrière sans confirmer, puis confirmer un réglage et redémarrer pour vérifier sa persistance.
 4. Laisser le délai à 15 secondes. Envoyer message puis STOP SHOW ; vérifier que chacun s’éteint au même délai. Renvoyer à 10 secondes et vérifier le nouveau délai complet.
-5. Vérifier REPRISE après STOP SHOW, noir immédiat, témoin activé/désactivé et longs textes depuis la distance de scène.
-6. Tester chaque bouton HTTP et OSC dans Companion, avec et sans clé correcte. Vérifier l’adresse réseau stable.
+5. Mettre le délai à 0, vérifier que STOP SHOW reste affiché au-delà de 15 secondes, puis réactiver un délai positif. Vérifier REPRISE après STOP SHOW, noir immédiat, témoin activé/désactivé et longs textes depuis la distance de scène.
+6. Tester chaque bouton HTTP et OSC dans Companion, sans clé. Vérifier l’adresse réseau stable.
 7. Tester une minuterie, une cible dans quelques minutes, puis la cible finale de minuit avec l’heure du Pi synchronisée. Vérifier la prolongation sans redémarrer les compteurs.
 8. Couper la liaison au service pour confirmer noir et témoin ambre ; redémarrer le service pour confirmer retour au noir et reprise des nouvelles commandes.
 9. Laisser le système fonctionner pendant une durée au moins égale au spectacle, avec répétition des consignes et contrôle de la veille, du réseau et de la température.

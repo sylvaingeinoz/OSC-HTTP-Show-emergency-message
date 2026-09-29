@@ -41,7 +41,7 @@ function render() {
   if (mode === 'clock') text = new Intl.DateTimeFormat('fr-CH', {timeZone: config.timezone, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'}).format(new Date((state.server_time + elapsed) * 1000));
   if (mode === 'timer' || mode === 'countdown') text = duration(state.cue.remaining - elapsed);
   if (!content.hidden) fit(text, config);
-  if (mode === 'test') document.querySelector('#dimensions').textContent = `${innerWidth} × ${innerHeight} · zone du navigateur`;
+  if (mode === 'test') document.querySelector('#dimensions').textContent = `${innerWidth} × ${innerHeight}`;
 }
 async function poll() {
   const started = performance.now();
@@ -52,7 +52,7 @@ async function poll() {
     received = performance.now();
     requestDuration = received - started;
     state = next;
-    expires = received + Math.max(0, state.remaining * 1000 - requestDuration);
+    expires = state.remaining === null ? Infinity : received + Math.max(0, state.remaining * 1000 - requestDuration);
   } catch (_) { /* Le rendu coupe automatiquement au noir en cas de perte de liaison. */ }
   render();
   setTimeout(poll, 200);

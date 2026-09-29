@@ -3,14 +3,12 @@
 import argparse
 import copy
 import datetime as dt
-import hmac
 import json
 import logging
 import math
 import os
 from pathlib import Path
 import re
-import secrets
 import socketserver
 import struct
 import subprocess
@@ -47,7 +45,7 @@ def settings(current, patch):
     if not isinstance(patch, dict) or set(patch) - (set(DEFAULT) - {'hdmi'}):
         raise ValueError('Réglage inconnu ou format invalide.')
     c = {**current, **patch}
-    number(c['off_time'], 1, 86400, 'Délai au noir')
+    number(c['off_time'], 0, 86400, 'Délai au noir')
     number(c['size'], 24, 400, 'Taille')
     number(c['blink_ms'], 500, 3000, 'Période de clignotement')
     if type(c['indicator']) is not bool or c['font'] not in ('sans', 'serif', 'mono'):
@@ -116,15 +114,7 @@ class App:
             loaded = json.loads(self.config_path.read_text())
             self.config = settings(self.config, {k: v for k, v in loaded.items() if k != 'hdmi'})
             self.config['hdmi'] = loaded.get('hdmi')
-        token_path = self.directory / 'token'
         self.directory.mkdir(parents=True, exist_ok=True)
-        if not token_path.exists():
-            with token_path.open('x') as f:
-                os.chmod(token_path, 0o600)
-                f.write(secrets.token_urlsafe(32))
-        self.token = token_path.read_text().strip()
-        if not self.token:
-            raise ValueError('Clé de commande vide.')
         self.cue = dict(mode='black', text='')
         self.deadline = 0
         self.revision = 0
@@ -133,15 +123,17 @@ class App:
         self.osc_received = 0
         self.osc_rejected = 0
 
-    def authorized(self, value):
-        return isinstance(value, str) and hmac.compare_digest(value.encode(), self.token.encode())
-
     def configure(self, data):
         with self.lock:
             new = settings(self.config, data)
             save_json(self.config_path, new)
+            if self.cue['mode'] != 'black' and (self.deadline is None or self.mono() < self.deadline):
+                if new['off_time'] == 0:
+                    self.deadline = None
+                elif self.config['off_time'] == 0:
+                    self.deadline = self.mono() + new['off_time']
             self.config = new
-            # Les réglages ne sont pas une consigne et ne réarment pas le délai.
+            # Hors activation/désactivation du délai, les réglages ne réarment rien.
             return copy.deepcopy(new)
 
     def command(self, data):
@@ -154,8 +146,8 @@ class App:
         with self.lock:
             now = self.mono()
             if mode == 'keepalive':
-                if self.cue['mode'] != 'black' and now < self.deadline:
-                    self.deadline = now + self.config['off_time']
+                if self.cue['mode'] != 'black' and (self.deadline is None or now < self.deadline):
+                    self.deadline = now + self.config['off_time'] if self.config['off_time'] else None
                 return self.snapshot()
             cue = dict(mode=mode, text='')
             if mode in ('text', 'stop'):
@@ -180,15 +172,15 @@ class App:
             elif mode not in ('black', 'clock', 'test'):
                 raise ValueError('Commande inconnue.')
             self.cue = cue
-            self.deadline = now + self.config['off_time'] if mode != 'black' else 0
+            self.deadline = (now + self.config['off_time'] if self.config['off_time'] else None) if mode != 'black' else 0
             self.revision += 1
             return self.snapshot()
 
     def snapshot(self):
         with self.lock:
             now, wall = self.mono(), self.wall()
-            remaining = max(0, self.deadline - now)
-            cue = copy.deepcopy(self.cue) if remaining else dict(mode='black', text='')
+            remaining = None if self.deadline is None else max(0, self.deadline - now)
+            cue = copy.deepcopy(self.cue) if remaining is None or remaining > 0 else dict(mode='black', text='')
             if cue['mode'] == 'timer':
                 cue['remaining'] = max(0, cue.pop('timer_end') - now)
             if cue['mode'] == 'countdown':
@@ -279,17 +271,15 @@ def decode_osc(packet):
 
 def osc_command(app, packet):
     address, args = decode_osc(packet)
-    if not args or not app.authorized(args[0]):
-        raise ValueError('Clé OSC invalide.')
     mode = address[6:]
-    count = 2 if mode in ('text', 'timer', 'countdown') else 1
-    if mode == 'stop' and len(args) == 2:
-        count = 2
+    count = 1 if mode in ('text', 'timer', 'countdown') else 0
+    if mode == 'stop' and len(args) == 1:
+        count = 1
     if len(args) != count:
         raise ValueError('Nombre d’arguments OSC invalide.')
     data = {'mode': mode}
-    if count == 2:
-        data['seconds' if mode == 'timer' else 'target' if mode == 'countdown' else 'text'] = args[1]
+    if count == 1:
+        data['seconds' if mode == 'timer' else 'target' if mode == 'countdown' else 'text'] = args[0]
     return app.command(data)
 
 
@@ -308,7 +298,7 @@ class OSCHandler(socketserver.BaseRequestHandler):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'StopShow/1.1'
+    server_version = 'StopShow/1.2'
     def setup(self):
         super().setup()
         self.connection.settimeout(5)
@@ -331,19 +321,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def auth(self):
-        return self.server.app.authorized(self.headers.get('Authorization', '').removeprefix('Bearer '))
-
     def do_GET(self):
         path = urlsplit(self.path).path
         app = self.server.app
         if path == '/api/state':
             return self.reply(200, app.snapshot())
         if path == '/api/health':
-            return self.reply(200, dict(ok=True, version='1.1.0'))
+            return self.reply(200, dict(ok=True, version='1.2.0'))
         if path in ('/api/settings', '/api/hdmi', '/api/diagnostics'):
-            if not self.auth():
-                return self.reply(401, {'error': 'Clé de commande requise.'})
             try:
                 with app.lock:
                     if path == '/api/settings':
@@ -365,8 +350,6 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(404, {'error': 'Page introuvable.'})
 
     def do_POST(self):
-        if not self.auth():
-            return self.reply(401, {'error': 'Clé de commande requise.'})
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= 32768:
@@ -414,7 +397,7 @@ def main():
             time.sleep(.2)
     threading.Thread(target=maintenance, daemon=True).start()
     threading.Thread(target=udp.serve_forever, daemon=True).start()
-    logging.info('Prêt : HTTP %s:%s / OSC UDP %s. Clé : %s/token', args.host, args.port, args.osc_port, args.data)
+    logging.info('Prêt : HTTP %s:%s / OSC UDP %s.', args.host, args.port, args.osc_port)
     try:
         http.serve_forever()
     except KeyboardInterrupt:

@@ -1,6 +1,6 @@
 # Guide complet — STOP SHOW
 
-Version 1.1 · interface et documentation en français · 16 septembre 2026.
+Version 1.2 · interface et documentation en français · 29 septembre 2026.
 
 Une télévision HDMI affiche les consignes envoyées depuis la régie web ou Bitfocus Companion. Le Pi ouvre automatiquement une session graphique dédiée, sur fond noir, avec Chromium plein écran. Aucun bureau ni panneau n’est lancé dans cette session. Aucun clavier n’est nécessaire après la préparation de la carte et l’installation par SSH.
 
@@ -19,7 +19,7 @@ Pour essayer avec Python 3.9 ou ultérieur, depuis ce dossier :
 python3 server.py --data .data
 ```
 
-Ouvrir [la régie locale](http://127.0.0.1:8080), puis lire la clé avec `cat .data/token` et la saisir dans « Clé de commande ». [L’écran de scène](http://127.0.0.1:8080/display) fonctionne dans un second onglet. L’ordinateur n’a pas besoin de Wayland pour essayer les consignes ; le panneau HDMI indiquera honnêtement son indisponibilité. Arrêt : Ctrl+C.
+Ouvrir [la régie locale](http://127.0.0.1:8080) ; aucun identifiant ni clé n’est nécessaire. [L’écran de scène](http://127.0.0.1:8080/display) fonctionne dans un second onglet. L’ordinateur n’a pas besoin de Wayland pour essayer les consignes ; le panneau HDMI indiquera honnêtement son indisponibilité. Arrêt : Ctrl+C.
 
 ## Comportement de l’afficheur
 
@@ -32,12 +32,12 @@ Ouvrir [la régie locale](http://127.0.0.1:8080), puis lire la clé avec `cat .d
 | Minuterie | Durée en secondes, affichage HH:MM:SS, arrêt à zéro. Horloge monotone pour résister aux corrections de l’heure système. |
 | Compte à rebours | Date et heure cible explicites avec décalage UTC, affichage HH:MM:SS, arrêt à zéro. |
 | Noir | Noir immédiat ; signal HDMI conservé, téléviseur toujours allumé. |
-| Mire | Barres de couleur, quadrillage, cercle et repères de sens pour préparer l’écran. |
+| Mire | Cadre, croix centrale, trois plages de gris et repères discrets pour préparer l’écran. |
 | Témoin | Optionnel, désactivé par défaut. Petit point vert même au noir ; ambre en cas de perte de liaison au service. |
 
-**Retour au noir : 15 secondes par défaut.** Chaque consigne valide reçue remplace la précédente et repart pour le délai complet. STOP SHOW respecte exactement cette règle et ne possède aucun verrouillage. La mire, l’horloge et les compteurs suivent aussi le délai. Les réglages et les lectures d’état ne réarment rien. Une commande invalide ne change pas l’affichage.
+**Retour au noir : 15 secondes par défaut.** Chaque consigne valide reçue remplace la précédente et repart pour le délai complet. STOP SHOW respecte exactement cette règle et ne possède aucun verrouillage. La mire, l’horloge et les compteurs suivent aussi le délai. Les lectures d’état ne réarment rien. **0 désactive le retour automatique au noir, même pour STOP SHOW et une consigne déjà visible.** Repasser de 0 à un délai positif démarre ce délai pour la consigne visible. Changer entre deux délais positifs ne réarme pas la consigne en cours. Une consigne déjà éteinte ne réapparaît pas. Une commande invalide ne change pas l’affichage.
 
-« Prolonger la consigne actuelle » / `keepalive` repart pour un délai complet sans remettre à zéro la minuterie ou la cible. Il ne ressuscite pas une consigne déjà éteinte. Pour garder une horloge, une mire ou un compteur pendant longtemps, augmenter le délai avant de l’envoyer, ou envoyer `keepalive` périodiquement, par exemple toutes les 5 secondes pour un délai de 15 secondes. Ne pas répéter `timer` : cela redémarrerait la durée.
+« Prolonger la consigne actuelle » / `keepalive` repart pour un délai complet sans remettre à zéro la minuterie ou la cible. Il ne ressuscite pas une consigne déjà éteinte. Pour garder une horloge, une mire ou un compteur pendant longtemps, mettre le délai à 0, augmenter le délai avant de l’envoyer, ou envoyer `keepalive` périodiquement, par exemple toutes les 5 secondes pour un délai de 15 secondes. Ne pas répéter `timer` : cela redémarrerait la durée.
 
 La police se choisit entre sans empattement, serif et monospace. La taille est un maximum exprimé en pixels pour une hauteur d’écran de 1 080 pixels, proportionnel aux autres résolutions. Le texte se réduit automatiquement pour tenir entièrement dans les marges : un texte très long devient petit. Privilégier des consignes courtes et vérifier la lisibilité à la distance réelle.
 
@@ -59,18 +59,13 @@ Se connecter par SSH avec le compte créé dans Imager, puis suivre [les deux co
 
 Le script télécharge le dépôt public indiqué, installe les paquets nécessaires via les dépôts Raspberry Pi OS, copie l’application dans `~/.local/share/stop-show/app` et configure LightDM pour ouvrir automatiquement la session **Stop Show**. Cette session utilise son propre labwc, sans bureau, panneau, économiseur d’écran ni démon de notifications. Deux services utilisateur supervisent le service HTTP/OSC et Chromium. Le lanceur de session relance labwc s’il se termine.
 
-Les fichiers système modifiés sont sauvegardés une seule fois sous `/var/lib/stop-show-install`. Relancer l’installateur met à jour le logiciel en conservant la clé et les réglages dans `~/.local/share/stop-show/data`. Le nouvel installateur retire uniquement son ancien ajout d’autostart v1.0, en conservant une sauvegarde. Un redémarrage est nécessaire pour activer ou mettre à jour la session dédiée. L’installation ne redémarre pas le Pi automatiquement.
+Les fichiers système modifiés sont sauvegardés une seule fois sous `/var/lib/stop-show-install`. Relancer l’installateur met à jour le logiciel en conservant les réglages dans `~/.local/share/stop-show/data`. Le nouvel installateur retire uniquement son ancien ajout d’autostart v1.0, en conservant une sauvegarde. Un redémarrage est nécessaire pour activer ou mettre à jour la session dédiée. L’installation ne redémarre pas le Pi automatiquement.
 
 Le script demande `sudo` pour installer les paquets et configurer le système. Il ne modifie ni les accès SSH, ni le Wi-Fi, ni le nom d’hôte. L’accès SSH doit déjà fonctionner, car le Pi devient un afficheur dédié. La session choisit directement labwc ; aucune sélection manuelle Wayland/X11 n’est nécessaire sur l’image prise en charge.
 
 ### 3. Connecter la régie
 
-```sh
-ssh regie@stopshow.local
-cat ~/.local/share/stop-show/data/token
-```
-
-Ouvrir `http://stopshow.local:8080` depuis l’ordinateur, tablette ou téléphone du même réseau. Saisir la clé et cliquer « Connecter ». La clé est conservée dans la session de cet onglet, pas dans l’URL. La TV doit être noire après le chargement ; envoyer une mire pour confirmer son fonctionnement.
+Ouvrir `http://stopshow.local:8080` depuis l’ordinateur, tablette ou téléphone du même réseau. La régie est immédiatement utilisable, sans connexion ni clé. La TV doit être noire après le chargement ; envoyer une mire pour confirmer son fonctionnement.
 
 Ports par défaut : TCP 8080 (web et HTTP), UDP 9000 (OSC). Le script Pi écoute toutes les interfaces IPv4. Le démarrage manuel écoute seulement `127.0.0.1`, sauf si `--host 0.0.0.0` est ajouté. Les changements de ports s’effectuent dans le service et le lanceur Chromium, pas dans la régie web.
 
@@ -120,11 +115,11 @@ systemctl --user restart stop-show.service stop-show-kiosk.service
 - Essai non confirmé : recharger la liste HDMI pour consulter le résultat du retour arrière.
 - Mauvais mode enregistré : arrêter le service, sauvegarder `~/.local/share/stop-show/data/settings.json`, mettre son champ `hdmi` à `null`, puis redémarrer le Pi pour reprendre le mode du compositeur.
 - Minuterie disparue : vérifier le délai au noir. Les compteurs n’en sont pas exemptés.
-- OSC sans effet : vérifier l’adresse `/show/...`, l’UDP 9000, la clé comme premier argument et les types. `/api/diagnostics` expose les compteurs reçus/rejetés avec authentification.
+- OSC sans effet : vérifier l’adresse `/show/...`, l’UDP 9000, les arguments et leurs types. `/api/diagnostics` expose les compteurs reçus/rejetés sans authentification.
 - Témoin absent : il est désactivé par défaut. Un point ambre signifie que l’écran a perdu le service.
 - Bureau visible : la session dédiée Stop Show n’a pas été sélectionnée ; consulter `sudo journalctl -u lightdm -b` et `/etc/lightdm/lightdm.conf`. Voir aussi [les limites du démarrage propre](DEMARRAGE.md).
 
-Pour mettre à jour, relancer les commandes d’installation du README puis redémarrer hors représentation. La clé et les réglages restent dans `data/` et sont préservés. Sauvegarder ce dossier pour conserver la configuration ; les consignes en cours ne sont jamais enregistrées.
+Pour mettre à jour un Pi déjà installé en 1.1, suivre [les commandes de mise à jour du README](README.md#mise-à-jour-dun-pi-déjà-installé-en-version-11). Les réglages restent dans `data/` et sont préservés. Sauvegarder ce dossier pour conserver la configuration ; les consignes en cours ne sont jamais enregistrées.
 
 Pour revenir à la configuration système sauvegardée, depuis SSH :
 
@@ -133,10 +128,10 @@ bash ~/.local/share/stop-show/app/pi/restore-desktop.sh
 sudo reboot
 ```
 
-Les fichiers système créés sont retirés et ceux qui existaient sont restaurés depuis la sauvegarde initiale. L’application, les clés et les réglages restent présents. La cible de démarrage demeure graphique et LightDM reste activé ; choisir le mode console dans `raspi-config` si souhaité. Après migration depuis v1.0, l’ancien lancement automatique v1.0 reste désactivé afin de retrouver le bureau normal.
+Les fichiers système créés sont retirés et ceux qui existaient sont restaurés depuis la sauvegarde initiale. L’application et les réglages restent présents. La cible de démarrage demeure graphique et LightDM reste activé ; choisir le mode console dans `raspi-config` si souhaité. Après migration depuis v1.0, l’ancien lancement automatique v1.0 reste désactivé afin de retrouver le bureau normal.
 
 ## Réseau et limites de cette première version
 
-Clé requise pour les commandes HTTP, OSC et la lecture des réglages/diagnostics. L’état courant, le texte et l’écran restent consultables sans clé sur le réseau de régie. HTTP et OSC ne sont pas chiffrés : utiliser un réseau local de confiance, ne pas exposer ces ports sur Internet. Il n’y a ni compte par opérateur, ni TLS intégré, ni journal des consignes. Les datagrammes OSC n’offrent pas de garantie de livraison ; HTTP fournit un accusé de réception logiciel, sans confirmer ce que montre physiquement la TV.
+La régie, les commandes HTTP/OSC et les réglages sont accessibles sans clé ni compte sur le réseau de régie. La sécurité SSH reste inchangée. HTTP et OSC ne sont pas chiffrés : utiliser un réseau local de confiance, ne pas exposer ces ports sur Internet. Il n’y a ni compte par opérateur, ni TLS intégré, ni journal des consignes. Les datagrammes OSC n’offrent pas de garantie de livraison ; HTTP fournit un accusé de réception logiciel, sans confirmer ce que montre physiquement la TV.
 
 STOP SHOW est une consigne visuelle de régie. Il ne déclenche aucune coupure électrique ou arrêt machine. L’application n’a actuellement été essayée sur aucun Pi réel ; voir la recette de validation matérielle avant une représentation.

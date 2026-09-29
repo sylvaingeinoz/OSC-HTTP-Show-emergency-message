@@ -1,23 +1,19 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let key = sessionStorage.getItem('stop-show-key') || '', outputs = [], confirmUntil = 0;
-$('token').value = key;
+let outputs = [], confirmUntil = 0;
 function notice(message, error = false) { $('notice').textContent = message; $('notice').className = error ? 'error' : 'success'; }
 async function api(path, body) {
-  const r = await fetch('/api/' + path, {method: body === undefined ? 'GET' : 'POST', headers: {'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'}, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(25000)});
+  const r = await fetch('/api/' + path, {method: body === undefined ? 'GET' : 'POST', headers: {'Content-Type': 'application/json'}, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(25000)});
   const result = await r.json();
   if (!r.ok) throw new Error(result.error || 'Erreur de communication');
   return result;
 }
 async function action(fn) { try { await fn(); } catch (e) { notice(e.message, true); } }
 async function command(data) { await api('command', data); notice(data.mode === 'black' ? 'Écran au noir.' : 'Consigne transmise.'); }
-$('connect').onclick = () => action(async () => {
-  key = $('token').value.trim();
+async function loadSettings() {
   const s = await api('settings');
-  sessionStorage.setItem('stop-show-key', key);
   for (const [name, value] of Object.entries(s)) if ($(name)) { if (name === 'indicator') $(name).checked = value; else $(name).value = value; }
-  notice('Connecté. Réglages chargés.');
-});
+}
 $('send').onclick = () => action(() => command({mode: 'text', text: $('message').value}));
 $('resume').onclick = () => action(() => command({mode: 'text', text: 'REPRISE'}));
 for (const mode of ['stop', 'black', 'clock', 'test', 'keepalive']) $(mode).onclick = () => action(() => command({mode}));
@@ -25,7 +21,7 @@ $('timer').onclick = () => action(() => command({mode: 'timer', seconds: Number(
 $('countdown').onclick = () => action(() => command({mode: 'countdown', target: $('target').value}));
 $('settings').onsubmit = event => { event.preventDefault(); action(async () => {
   await api('settings', {off_time: Number($('off_time').value), size: Number($('size').value), font: $('font').value, blink_ms: Number($('blink_ms').value), timezone: $('timezone').value.trim(), indicator: $('indicator').checked});
-  notice('Réglages enregistrés. Le délai choisi s’applique à la prochaine consigne.');
+  notice('Réglages enregistrés. 0 désactive le retour au noir, y compris pour la consigne en cours.');
 }); };
 function modes() {
   const out = outputs.find(o => o.name === $('output').value);
@@ -54,10 +50,10 @@ async function status() {
   try {
     const r = await fetch('/api/state', {signal: AbortSignal.timeout(1500)}); if (!r.ok) throw new Error(); const s = await r.json();
     $('connection').textContent = '● Service en ligne'; $('connection').className = 'badge';
-    $('mode-label').textContent = labels[s.cue.mode]; $('off-label').textContent = s.cue.mode === 'black' ? 'Aucune consigne' : 'Noir dans ' + Math.ceil(s.remaining) + ' s';
+    $('mode-label').textContent = labels[s.cue.mode]; $('off-label').textContent = s.cue.mode === 'black' ? 'Aucune consigne' : s.remaining === null ? 'Retour au noir désactivé' : 'Noir dans ' + Math.ceil(s.remaining) + ' s';
   } catch (_) { $('connection').textContent = '● Liaison perdue'; $('connection').className = 'badge offline'; $('off-label').textContent = 'État indisponible'; }
   if (confirmUntil && performance.now() >= confirmUntil) { confirmUntil = 0; $('confirm-hdmi').disabled = true; notice('Délai de confirmation terminé. Détectez les modes pour vérifier le retour arrière.'); }
   setTimeout(status, 500);
 }
-if (key) $('connect').click();
+action(loadSettings);
 status();
