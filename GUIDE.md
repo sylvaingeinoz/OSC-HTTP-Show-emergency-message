@@ -1,6 +1,6 @@
 # Guide complet — STOP SHOW
 
-Version 1.3 · interface et documentation en français · 26 novembre 2026.
+Version 1.4 · interface et documentation en français · 26 novembre 2026.
 
 Une télévision HDMI affiche les consignes envoyées depuis la régie web ou Bitfocus Companion. Le Pi ouvre automatiquement une session graphique dédiée, sur fond noir, avec Chromium plein écran. Aucun bureau ni panneau n’est lancé dans cette session. Aucun clavier n’est nécessaire après la préparation de la carte et l’installation par SSH.
 
@@ -159,3 +159,11 @@ ls -dt ~/.local/share/stop-show/app-before-*
 En cas de coupure de courant pendant le remplacement ou d’échec de systemd empêchant la restauration, une intervention SSH peut être nécessaire : arrêter `stop-show-session.target`, conserver le dossier `app` défaillant s’il existe, puis remettre la sauvegarde `app-before-<date>` choisie sous le nom `app` et relancer la cible. Ne pas remplacer le dossier `data`. La commande manuelle `update.sh` du README reste utilisable lorsque l’application existe mais que la régie ne répond plus.
 
 Le contrôle de santé confirme la réponse du service HTTP, pas la présence d’une image HDMI ni le bon fonctionnement physique de Chromium. Valider la mire sur la TV après toute mise à jour. Aucun test sur un vrai Pi n’a été réalisé pour cette version.
+
+## Adresses et documentation intégrée (v1.4)
+
+Le panneau **Accès à distance** affiche les IPv4 détectées sur le Pi et son nom `hostname.local`, avec les ports réellement ouverts. Ces informations figurent aussi en bas de la mire et sont actualisées environ toutes les 30 secondes. Si Ethernet et Wi-Fi ont chacun une adresse, les deux sont affichées. Aucun service Internet n’est interrogé pour les obtenir.
+
+Le nom `.local` est construit à partir du nom d’hôte ; son affichage ne confirme pas que mDNS fonctionne sur votre réseau. mDNS/Avahi et sa résolution sur l’ordinateur de régie doivent être disponibles. Sinon, utiliser l’IP. Les adresses appartiennent au Pi (ou à l’ordinateur hébergeant le service), pas au téléphone qui consulte la page.
+
+**Documentation OSC / HTTP** ouvre une fenêtre avec toutes les commandes d’affichage, leurs effets, les corps JSON, les chemins et arguments OSC, les réglages, les opérations HDMI, les diagnostics et les mises à jour. Le bouton **Fermer** ou la touche Échap referme la fenêtre. L’ouverture de cette documentation n’envoie aucune consigne.

@@ -59,3 +59,15 @@ async function poll() {
 }
 setInterval(render, 100);
 poll();
+
+async function networkCaption() {
+  try {
+    const url = location.protocol === 'file:' ? 'http://127.0.0.1:8080/api/network' : '/api/network';
+    const response = await fetch(url, {cache:'no-store',signal:AbortSignal.timeout(5000)});
+    if (!response.ok) throw new Error();
+    const n = await response.json();
+    document.querySelector('#network-caption').textContent = `${n.ipv4.join(' · ') || 'IP indisponible'} · ${n.mdns} · HTTP ${n.http_port} / OSC ${n.osc_port ?? '—'}`;
+  } catch (_) { document.querySelector('#network-caption').textContent = 'Adresses réseau indisponibles'; }
+  setTimeout(networkCaption,30000);
+}
+networkCaption();

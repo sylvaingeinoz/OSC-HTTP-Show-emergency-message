@@ -1,5 +1,7 @@
 # Pilotage avec Bitfocus Companion
 
+Dans la régie, le bouton **Documentation OSC / HTTP** ouvre une aide complète avec les ports réels, les commandes, leurs arguments et des exemples HTTP adaptés à l’adresse utilisée. Les IP du Pi et son nom `hostname.local` figurent dans le panneau **Accès à distance** et sur la mire.
+
 Companion envoie ses commandes **vers le Pi**. Il n’est pas nécessaire d’activer le contrôle distant de Companion lui-même. Les modules officiels sont [Generic — HTTP Requests](https://bitfocus.io/connections/generic-http) et [Generic — OSC](https://bitfocus.io/connections/generic-osc). Les intitulés exacts des champs peuvent varier selon la version du module.
 
 Dans les exemples, remplacer `192.168.1.50` par l’IP du Pi. Aucun identifiant, clé ou en-tête Authorization n’est requis.
@@ -88,6 +90,7 @@ Les commandes concurrentes sont traitées dans leur ordre de réception ; la der
 
 Sans authentification :
 
+- `GET /api/network` : IPv4 du Pi, nom mDNS, ports HTTP/OSC réels et adresse d’écoute.
 - `GET /api/settings` : configuration.
 - `POST /api/settings` : objet partiel, exemple ci-dessous.
 - `GET /api/diagnostics` : compteurs OSC reçus/rejetés et dernière information HDMI.

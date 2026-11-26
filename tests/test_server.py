@@ -201,6 +201,7 @@ class NetworkTests(unittest.TestCase):
         cls.http.app = cls.app
         cls.udp = UDPServer(('127.0.0.1', 0), OSCHandler)
         cls.udp.app = cls.app
+        cls.http.osc_port = cls.udp.server_address[1]
         for server in [cls.http, cls.udp]: threading.Thread(target=server.serve_forever, daemon=True).start()
         cls.base = 'http://127.0.0.1:' + str(cls.http.server_port)
     @classmethod
@@ -237,6 +238,16 @@ class NetworkTests(unittest.TestCase):
         for data in ({'url':'https://example.com'}, {'revision':'a'*40}, {'command':'id'}, []):
             self.assertEqual(self.request('/api/updates/install', data)[0], 400)
         self.assertEqual(self.request('/api/updates/install', {})[0], 400)
+
+    def test_network_ports_and_local_kiosk_access(self):
+        req = urllib.request.Request(self.base + '/api/network', headers={'Origin':'null'})
+        with urllib.request.urlopen(req,timeout=5) as response:
+            data = json.load(response)
+            self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), '*')
+        self.assertEqual(data['http_port'],self.http.server_port)
+        self.assertEqual(data['osc_port'],self.udp.server_address[1])
+        self.assertTrue(data['mdns'].endswith('.local'))
+        self.assertIsInstance(data['ipv4'],list)
 
     def test_static_and_no_traversal(self):
         for path in ['/', '/display', '/admin.js', '/display.js', '/style.css']:

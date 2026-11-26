@@ -125,3 +125,9 @@ La validation matérielle reste à effectuer ; les tests locaux ne la remplacent
 Les deux pages déclarent `translate="no"` et `<meta name="google" content="notranslate">`. Ce dernier mécanisme empêche Chromium de proposer la traduction de la page ([documentation Chromium](https://chromium.googlesource.com/website/+/HEAD/site/developers/design-documents/translate/index.md)). La correction est dans les fichiers HTML, donc livrée par OTA même aux Pi dont le lanceur Chromium est une copie antérieure. Aucun changement des réglages ou du système.
 
 Structure HTML et numéro de version vérifiés localement. La disparition de la bulle dans la version Chromium du Pi reste à confirmer après installation et relance automatique du kiosque.
+
+## Version 1.4 — adresses et documentation intégrée
+
+51 tests réussis localement : détection de plusieurs interfaces, déduplication et exclusion du loopback, repli sans outil `ip`, absence de réseau, nom mDNS, ports réels et accès de la page locale à `/api/network`, plus la suite existante. Syntaxe JavaScript vérifiée.
+
+Contrôle navigateur : panneau avec IP/hostname.local et ports de test 8084/9004 ; ouverture et fermeture de la documentation, listes HTTP/OSC et exemples ; mire à 1280 × 720 avec les adresses en bas du cadre. Le Pi physique, sa résolution mDNS et l’affichage HDMI restent à vérifier après mise à jour.

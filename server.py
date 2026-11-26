@@ -19,6 +19,7 @@ from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from ota import Updates, version, read_json
+from pi.network_info import identity
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT = dict(off_time=15, indicator=False, font='sans', size=120,
@@ -107,6 +108,9 @@ class DisplayHardware:
 class App:
     def __init__(self, directory, hardware=None, mono=time.monotonic, wall=time.time):
         self.updates = Updates()
+        self.network_lock = threading.Lock()
+        self.network_cache = None
+        self.network_checked = 0
         self.directory = Path(directory)
         self.lock = threading.RLock()
         self.mono, self.wall = mono, wall
@@ -125,6 +129,13 @@ class App:
         self.hdmi_error = None
         self.osc_received = 0
         self.osc_rejected = 0
+
+    def network(self):
+        with self.network_lock:
+            if self.network_cache is None or time.monotonic() - self.network_checked > 30:
+                self.network_cache = identity()
+                self.network_checked = time.monotonic()
+            return copy.deepcopy(self.network_cache)
 
     def configure(self, data):
         with self.lock:
@@ -301,7 +312,7 @@ class OSCHandler(socketserver.BaseRequestHandler):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'StopShow/1.3'
+    server_version = 'StopShow/1.4'
     def setup(self):
         super().setup()
         self.connection.settimeout(5)
@@ -316,7 +327,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-store')
         # Lecture publique uniquement : la page locale du kiosque a une origine null.
-        if urlsplit(self.path).path == '/api/state' and self.command == 'GET':
+        if urlsplit(self.path).path in ('/api/state', '/api/network') and self.command == 'GET':
             self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
@@ -327,6 +338,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
         app = self.server.app
+        if path == '/api/network':
+            return self.reply(200, dict(**app.network(), http_port=self.server.server_port,
+                osc_port=getattr(self.server, 'osc_port', None), listen_address=self.server.server_address[0]))
         if path == '/api/updates':
             return self.reply(200, app.updates.status())
         if path == '/api/state':
@@ -399,6 +413,7 @@ def main():
     http.app = app
     udp = UDPServer((args.host, args.osc_port), OSCHandler)
     udp.app = app
+    http.osc_port = udp.server_address[1]
     def maintenance():
         while True:
             app.tick()
