@@ -2,7 +2,9 @@
 
 Un Raspberry Pi 5 derrière une télévision HDMI, piloté depuis une régie web ou **Bitfocus Companion en HTTP/OSC**. Interface en français, fonctionnement local, sans abonnement.
 
-**Version 1.3 — mire « TV INFO CAST » et mises à jour depuis la régie.** Le Pi ouvre automatiquement l’afficheur à chaque démarrage. La session ne lance aucun bureau, panneau ou notification ; elle utilise un fond noir et un curseur transparent. Le navigateur repart avec un profil temporaire neuf, et son écran local reste noir si le service met du temps à démarrer. [Détails et limites du démarrage](DEMARRAGE.md).
+**Version 1.3.1 — mire « TV INFO CAST » et mises à jour depuis la régie.** Le Pi ouvre automatiquement l’afficheur à chaque démarrage. La session ne lance aucun bureau, panneau ou notification ; elle utilise un fond noir et un curseur transparent. Le navigateur repart avec un profil temporaire neuf, et son écran local reste noir si le service met du temps à démarrer. [Détails et limites du démarrage](DEMARRAGE.md).
+
+La version 1.3.1 désactive la proposition de traduction directement dans les pages de scène et de régie. Depuis la version 1.3, utilisez les boutons de mise à jour ; la relance du kiosque charge le correctif.
 
 ## Installation sur le Pi
 

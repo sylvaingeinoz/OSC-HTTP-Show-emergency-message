@@ -119,3 +119,9 @@ La validation matérielle reste à effectuer ; les tests locaux ne la remplacent
 - Navigateur à 1280 × 720 : texte « TV INFO CAST » grand et centré, cadre/croix/gris préservés, réglage 0 et mire active ; panneau OTA affichant version et boutons, recherche et affichage d’erreur vérifiés.
 
 À vérifier sur le Pi : lancement de l’unité systemd indépendante, arrêt/reprise du kiosque, chargement de sa page locale, signal HDMI, reprise après coupure électrique et cycle OTA entre deux commits publiés. Le contrôle HTTP ne garantit pas l’image sur le téléviseur.
+
+## Correctif 1.3.1 — proposition Google Translate
+
+Les deux pages déclarent `translate="no"` et `<meta name="google" content="notranslate">`. Ce dernier mécanisme empêche Chromium de proposer la traduction de la page ([documentation Chromium](https://chromium.googlesource.com/website/+/HEAD/site/developers/design-documents/translate/index.md)). La correction est dans les fichiers HTML, donc livrée par OTA même aux Pi dont le lanceur Chromium est une copie antérieure. Aucun changement des réglages ou du système.
+
+Structure HTML et numéro de version vérifiés localement. La disparition de la bulle dans la version Chromium du Pi reste à confirmer après installation et relance automatique du kiosque.
