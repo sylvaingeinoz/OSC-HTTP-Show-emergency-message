@@ -232,6 +232,12 @@ class NetworkTests(unittest.TestCase):
             self.assertEqual(response.status, 200)
             self.assertIsNone(response.headers.get('Access-Control-Allow-Origin'))
 
+    def test_update_api_accepts_no_urls_or_commands(self):
+        self.assertEqual(self.request('/api/updates')[0], 200)
+        for data in ({'url':'https://example.com'}, {'revision':'a'*40}, {'command':'id'}, []):
+            self.assertEqual(self.request('/api/updates/install', data)[0], 400)
+        self.assertEqual(self.request('/api/updates/install', {})[0], 400)
+
     def test_static_and_no_traversal(self):
         for path in ['/', '/display', '/admin.js', '/display.js', '/style.css']:
             self.assertEqual(self.request(path)[0], 200)

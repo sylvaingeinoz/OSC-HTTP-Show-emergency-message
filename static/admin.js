@@ -57,3 +57,29 @@ async function status() {
 }
 action(loadSettings);
 status();
+
+let updateBusy = false, updateRequested = false;
+function showUpdate(s) {
+  $('update-versions').textContent = 'Version installée : ' + s.installed + (s.revision ? ' · ' + s.revision.slice(0, 7) : '') + (s.available ? ' — disponible : ' + s.available.version + ' · ' + s.available.revision.slice(0, 7) : '');
+  $('update-status').textContent = s.message;
+  if (!s.supported) $('update-status').textContent += ' Installation depuis cette page disponible sur le Pi uniquement.';
+  $('check-update').disabled = s.busy || updateBusy;
+  $('install-update').disabled = !s.supported || !s.available || s.busy || updateBusy;
+  if (updateRequested && ['success', 'error'].includes(s.job.state) && !s.busy) { updateRequested = false; loadSettings().catch(() => {}); document.querySelector('iframe').src = '/display'; }
+}
+async function updateAction(name) {
+  updateBusy = true; if (name === 'install') updateRequested = true; $('check-update').disabled = $('install-update').disabled = true;
+  $('update-status').textContent = name === 'check' ? 'Recherche en cours…' : 'Lancement de l’installation…';
+  try { const s = await api('updates/' + name, {}); if (name === 'install') updateRequested = true; updateBusy = false; showUpdate(s); if (name === 'check') $('update-status').textContent = s.message; }
+  catch (e) { updateBusy = false; $('update-status').textContent = e.message; $('check-update').disabled = false; }
+}
+$('check-update').onclick = () => updateAction('check');
+$('install-update').onclick = () => updateAction('install');
+async function updateStatus() {
+  if (!updateBusy) {
+    try { const s = await api('updates'); showUpdate(s); }
+    catch (_) { if (updateRequested) $('update-status').textContent = 'Application en cours de redémarrage… Reconnexion automatique.'; }
+  }
+  setTimeout(updateStatus, 2000);
+}
+updateStatus();

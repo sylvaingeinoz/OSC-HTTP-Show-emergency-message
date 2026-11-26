@@ -18,16 +18,16 @@ source_dir="$(cd "$(dirname "$0")/.." && pwd)"
 install_dir="$HOME/.local/share/stop-show/app"
 current_user=$(id -un)
 # Un seul installateur à la fois, y compris lors d'une mise à jour.
-exec 9>"${XDG_RUNTIME_DIR:-/tmp}/stop-show-install-$(id -u).lock"
+exec 9>"$HOME/.stop-show-install.lock"
 flock -n 9 || { echo 'Une installation est déjà en cours.' >&2; exit 1; }
 sudo -v
 sudo apt-get update
 sudo apt-get install -y python3 chromium labwc swaybg wlr-randr fonts-dejavu-core
 mkdir -p "$install_dir/static" "$install_dir/pi/labwc" "$HOME/.config/systemd/user" "$HOME/.local/bin"
 # Garder les réglages hors du code mis à jour.
-cp "$source_dir/server.py" "$install_dir/server.py"
+cp "$source_dir/server.py" "$source_dir/ota.py" "$source_dir/version.json" "$install_dir/"
 cp "$source_dir/static/"* "$install_dir/static/"
-cp "$source_dir/pi/"*.sh "$source_dir/pi/configure_pi.py" "$install_dir/pi/"
+cp "$source_dir/pi/"*.sh "$source_dir/pi/"*.py "$install_dir/pi/"
 cp "$source_dir/pi/labwc/"* "$install_dir/pi/labwc/"
 cp "$source_dir/pi/kiosk.sh" "$HOME/.local/bin/stop-show-kiosk"
 cp "$source_dir/pi/session.sh" "$HOME/.local/bin/stop-show-session"

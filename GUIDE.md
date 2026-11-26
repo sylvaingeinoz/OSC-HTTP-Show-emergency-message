@@ -1,6 +1,6 @@
 # Guide complet — STOP SHOW
 
-Version 1.2 · interface et documentation en français · 29 septembre 2026.
+Version 1.3 · interface et documentation en français · 26 novembre 2026.
 
 Une télévision HDMI affiche les consignes envoyées depuis la régie web ou Bitfocus Companion. Le Pi ouvre automatiquement une session graphique dédiée, sur fond noir, avec Chromium plein écran. Aucun bureau ni panneau n’est lancé dans cette session. Aucun clavier n’est nécessaire après la préparation de la carte et l’installation par SSH.
 
@@ -32,7 +32,7 @@ Ouvrir [la régie locale](http://127.0.0.1:8080) ; aucun identifiant ni clé n�
 | Minuterie | Durée en secondes, affichage HH:MM:SS, arrêt à zéro. Horloge monotone pour résister aux corrections de l’heure système. |
 | Compte à rebours | Date et heure cible explicites avec décalage UTC, affichage HH:MM:SS, arrêt à zéro. |
 | Noir | Noir immédiat ; signal HDMI conservé, téléviseur toujours allumé. |
-| Mire | Cadre, croix centrale, trois plages de gris et repères discrets pour préparer l’écran. |
+| Mire | « TV INFO CAST » en grand au centre, cadre, croix discrète, trois plages de gris et repères discrets pour préparer l’écran. |
 | Témoin | Optionnel, désactivé par défaut. Petit point vert même au noir ; ambre en cas de perte de liaison au service. |
 
 **Retour au noir : 15 secondes par défaut.** Chaque consigne valide reçue remplace la précédente et repart pour le délai complet. STOP SHOW respecte exactement cette règle et ne possède aucun verrouillage. La mire, l’horloge et les compteurs suivent aussi le délai. Les lectures d’état ne réarment rien. **0 désactive le retour automatique au noir, même pour STOP SHOW et une consigne déjà visible.** Repasser de 0 à un délai positif démarre ce délai pour la consigne visible. Changer entre deux délais positifs ne réarme pas la consigne en cours. Une consigne déjà éteinte ne réapparaît pas. Une commande invalide ne change pas l’affichage.
@@ -119,7 +119,7 @@ systemctl --user restart stop-show.service stop-show-kiosk.service
 - Témoin absent : il est désactivé par défaut. Un point ambre signifie que l’écran a perdu le service.
 - Bureau visible : la session dédiée Stop Show n’a pas été sélectionnée ; consulter `sudo journalctl -u lightdm -b` et `/etc/lightdm/lightdm.conf`. Voir aussi [les limites du démarrage propre](DEMARRAGE.md).
 
-Pour mettre à jour un Pi déjà installé en 1.1, suivre [les commandes de mise à jour du README](README.md#mise-à-jour-dun-pi-déjà-installé-en-version-11). Les réglages restent dans `data/` et sont préservés. Sauvegarder ce dossier pour conserver la configuration ; les consignes en cours ne sont jamais enregistrées.
+Pour mettre à jour un Pi déjà installé en 1.1, suivre [les commandes de mise à jour du README](README.md#mise-à-jour-dun-pi-déjà-installé-en-version-11-ou-12). Les réglages restent dans `data/` et sont préservés. Sauvegarder ce dossier pour conserver la configuration ; les consignes en cours ne sont jamais enregistrées.
 
 Pour revenir à la configuration système sauvegardée, depuis SSH :
 
@@ -135,3 +135,27 @@ Les fichiers système créés sont retirés et ceux qui existaient sont restaur�
 La régie, les commandes HTTP/OSC et les réglages sont accessibles sans clé ni compte sur le réseau de régie. La sécurité SSH reste inchangée. HTTP et OSC ne sont pas chiffrés : utiliser un réseau local de confiance, ne pas exposer ces ports sur Internet. Il n’y a ni compte par opérateur, ni TLS intégré, ni journal des consignes. Les datagrammes OSC n’offrent pas de garantie de livraison ; HTTP fournit un accusé de réception logiciel, sans confirmer ce que montre physiquement la TV.
 
 STOP SHOW est une consigne visuelle de régie. Il ne déclenche aucune coupure électrique ou arrêt machine. L’application n’a actuellement été essayée sur aucun Pi réel ; voir la recette de validation matérielle avant une représentation.
+
+## Mises à jour depuis la régie
+
+Pour obtenir les boutons depuis une installation 1.1/1.2, exécuter une fois les deux commandes `update.sh` du README dans SSH avec le compte de l’installation. Recharger ensuite la page. À partir de la version 1.3, utiliser **Rechercher les mises à jour**, puis **Installer la mise à jour** si une version est proposée. La recherche seule ne modifie pas le logiciel. Aucun contrôle GitHub n’est déclenché au démarrage ou périodiquement ; seule la progression locale est interrogée par la page.
+
+La recherche affiche la version et l’identifiant court du commit. Le serveur fixe le dépôt et la branche `main` ; le navigateur ne peut fournir ni URL, ni commande système, ni révision à installer. L’installation utilise le commit annoncé, même si `main` change entre les deux clics. Les installations initiales sans identifiant de commit comparent le numéro de version ; chaque livraison doit donc mettre à jour `version.json`. Les installations OTA comparent ensuite le commit exact.
+
+Le téléchargement HTTPS, la taille et la structure de l’archive, la syntaxe Python et l’importation du serveur sont contrôlés avant d’arrêter l’affichage. Un verrou commun empêche les installations concurrentes. L’opération est exécutée par une unité utilisateur systemd indépendante, `stop-show-update`, qui survit à l’arrêt de l’application ([documentation systemd-run](https://freedesktop.org/software/systemd/man/latest/systemd-run.html)). Elle ne demande pas de droits administrateur.
+
+Le code est sauvegardé dans `~/.local/share/stop-show/app-before-<date>`, puis remplacé. Le dossier `data/`, les services, les accès SSH et les paramètres système ne sont pas modifiés. Le service et le kiosque sont relancés ; l’écran repart au noir. Le contrôle attend jusqu’à 35 secondes une réponse HTTP portant le nouveau commit. En cas d’échec, il remet le code précédent et relance les services. Le code défaillant reste disponible sous `app-failed-<date>` pour diagnostic. Ces sauvegardes ne sont pas supprimées automatiquement.
+
+La régie retrouve automatiquement la liaison et affiche le résultat. Recharger la page permet de charger une interface modifiée par une future version. Une coupure Internet ou une limite de requêtes GitHub est signalée ; réessayer ultérieurement. L’installation exige les chemins et les ports standards, notamment HTTP 8080. Les installations personnalisées doivent adapter le contrôle de santé avant usage OTA.
+
+### Diagnostic et récupération
+
+```sh
+cat ~/.local/share/stop-show/update-status.json
+journalctl --user -u stop-show-update -u stop-show.service -n 100 --no-pager
+ls -dt ~/.local/share/stop-show/app-before-*
+```
+
+En cas de coupure de courant pendant le remplacement ou d’échec de systemd empêchant la restauration, une intervention SSH peut être nécessaire : arrêter `stop-show-session.target`, conserver le dossier `app` défaillant s’il existe, puis remettre la sauvegarde `app-before-<date>` choisie sous le nom `app` et relancer la cible. Ne pas remplacer le dossier `data`. La commande manuelle `update.sh` du README reste utilisable lorsque l’application existe mais que la régie ne répond plus.
+
+Le contrôle de santé confirme la réponse du service HTTP, pas la présence d’une image HDMI ni le bon fonctionnement physique de Chromium. Valider la mire sur la TV après toute mise à jour. Aucun test sur un vrai Pi n’a été réalisé pour cette version.

@@ -100,3 +100,7 @@ Sans authentification :
 ```
 
 Le délai accepté va de 0 à 86 400 secondes. 0 désactive le retour automatique au noir. Taille de 24 à 400. Police `sans`, `serif` ou `mono`. Passer à 0 désactive aussi le délai d’une consigne visible. Repasser de 0 à un délai positif démarre ce délai pour la consigne visible. Entre deux valeurs positives, le nouveau délai vaut pour la prochaine commande ou prolongation. Une consigne déjà éteinte ne réapparaît pas. Aucun appel HTTP GET ne modifie l’état.
+
+## Gestion des mises à jour (v1.3)
+
+La régie web possède les boutons de recherche et d’installation. Pour une intégration : `GET /api/updates` lit l’état local, `POST /api/updates/check` avec `{}` recherche, et `POST /api/updates/install` avec `{}` installe uniquement la proposition déjà trouvée. Aucun autre paramètre n’est accepté. Ne pas mettre l’installation dans une répétition Companion : elle interrompt l’affichage et repart au noir.

@@ -1,4 +1,4 @@
-# Validation — versions 1.0 à 1.2
+# Validation — versions 1.0 à 1.3
 
 Les sections 1.0 et 1.1 ci-dessous décrivent les essais historiques, avant suppression de la clé en 1.2.
 
@@ -104,3 +104,18 @@ La mise à jour sur un vrai Pi, la page locale du kiosque et le signal HDMI rest
 9. Laisser le système fonctionner pendant une durée au moins égale au spectacle, avec répétition des consignes et contrôle de la veille, du réseau et de la température.
 
 La validation matérielle reste à effectuer ; les tests locaux ne la remplacent pas.
+
+## Version 1.3 — 26 novembre 2026
+
+**47 tests réussis localement**, dont les fonctions antérieures (HTTP/OSC sans clé, délai 0, HDMI simulé, installation et restauration), plus :
+
+- Recherche sans installation implicite, version et commit épinglés, erreur réseau supprimant la proposition périmée.
+- Refus d’URLs, de commandes et de révisions fournies par le client HTTP.
+- Exclusion mutuelle par verrou, échec de lancement et statut exploitable.
+- Archive valide téléchargée simulée, rejet des chemins sortants et révisions arbitraires ; contrôle d’importation du serveur.
+- Remplacement, sauvegarde, préservation exacte des réglages, restauration de l’ancien code après échec du contrôle de santé.
+- Vrai processus du nouveau serveur démarré depuis le dossier remplacé, réponse HTTP portant la révision attendue, réglage 0 relu et fichier conservé à l’identique. Les commandes systemd sont simulées dans ces tests macOS.
+- Syntaxe Bash et JavaScript vérifiée.
+- Navigateur à 1280 × 720 : texte « TV INFO CAST » grand et centré, cadre/croix/gris préservés, réglage 0 et mire active ; panneau OTA affichant version et boutons, recherche et affichage d’erreur vérifiés.
+
+À vérifier sur le Pi : lancement de l’unité systemd indépendante, arrêt/reprise du kiosque, chargement de sa page locale, signal HDMI, reprise après coupure électrique et cycle OTA entre deux commits publiés. Le contrôle HTTP ne garantit pas l’image sur le téléviseur.

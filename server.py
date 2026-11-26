@@ -18,6 +18,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from ota import Updates, version, read_json
+
 ROOT = Path(__file__).resolve().parent
 DEFAULT = dict(off_time=15, indicator=False, font='sans', size=120,
                timezone='Europe/Zurich', blink_ms=800, hdmi=None)
@@ -104,6 +106,7 @@ class DisplayHardware:
 
 class App:
     def __init__(self, directory, hardware=None, mono=time.monotonic, wall=time.time):
+        self.updates = Updates()
         self.directory = Path(directory)
         self.lock = threading.RLock()
         self.mono, self.wall = mono, wall
@@ -298,7 +301,7 @@ class OSCHandler(socketserver.BaseRequestHandler):
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = 'StopShow/1.2'
+    server_version = 'StopShow/1.3'
     def setup(self):
         super().setup()
         self.connection.settimeout(5)
@@ -324,10 +327,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlsplit(self.path).path
         app = self.server.app
+        if path == '/api/updates':
+            return self.reply(200, app.updates.status())
         if path == '/api/state':
             return self.reply(200, app.snapshot())
         if path == '/api/health':
-            return self.reply(200, dict(ok=True, version='1.2.0'))
+            return self.reply(200, dict(ok=True, version=version(), revision=read_json(ROOT / 'revision.json', {}).get('revision')))
         if path in ('/api/settings', '/api/hdmi', '/api/diagnostics'):
             try:
                 with app.lock:
@@ -359,7 +364,10 @@ class Handler(BaseHTTPRequestHandler):
             data = json.loads(self.rfile.read(size))
             app = self.server.app
             path = urlsplit(self.path).path
-            if path == '/api/command':
+            if path in ('/api/updates/check', '/api/updates/install'):
+                if data != {}: raise ValueError('Aucun paramètre accepté.')
+                value = app.updates.check() if path.endswith('/check') else app.updates.install()
+            elif path == '/api/command':
                 value = app.command(data)
             elif path == '/api/settings':
                 value = app.configure(data)

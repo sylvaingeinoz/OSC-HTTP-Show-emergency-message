@@ -12,7 +12,7 @@ SOURCE = Path(__file__).resolve().parents[1]
 
 def check_source(source):
     for name in ('server.py', 'static/admin.html', 'static/admin.js', 'static/display.html',
-                 'static/display.js', 'static/style.css', 'pi/install.sh'):
+                 'static/display.js', 'static/style.css', 'pi/install.sh', 'ota.py', 'version.json', 'pi/ota_worker.py'):
         if not (source / name).is_file():
             raise ValueError('Source incomplète : ' + name)
     for path in source.rglob('*.py'):
@@ -29,7 +29,8 @@ def update(home, source=SOURCE):
     backup = base / ('app-before-' + datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'))
     moved = False
     try:
-        shutil.copy2(source / 'server.py', stage / 'server.py')
+        for name in ('server.py', 'ota.py', 'version.json', 'revision.json'):
+            if (source / name).exists(): shutil.copy2(source / name, stage / name)
         for name in ('static', 'pi'):
             shutil.copytree(source / name, stage / name, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         app.rename(backup)

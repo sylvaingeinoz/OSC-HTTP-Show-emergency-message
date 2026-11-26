@@ -2,7 +2,7 @@
 
 Un Raspberry Pi 5 derrière une télévision HDMI, piloté depuis une régie web ou **Bitfocus Companion en HTTP/OSC**. Interface en français, fonctionnement local, sans abonnement.
 
-**Version 1.2 — accès direct, mire simplifiée et retour au noir désactivable.** Le Pi ouvre automatiquement l’afficheur à chaque démarrage. La session ne lance aucun bureau, panneau ou notification ; elle utilise un fond noir et un curseur transparent. Le navigateur repart avec un profil temporaire neuf, et son écran local reste noir si le service met du temps à démarrer. [Détails et limites du démarrage](DEMARRAGE.md).
+**Version 1.3 — mire « TV INFO CAST » et mises à jour depuis la régie.** Le Pi ouvre automatiquement l’afficheur à chaque démarrage. La session ne lance aucun bureau, panneau ou notification ; elle utilise un fond noir et un curseur transparent. Le navigateur repart avec un profil temporaire neuf, et son écran local reste noir si le service met du temps à démarrer. [Détails et limites du démarrage](DEMARRAGE.md).
 
 ## Installation sur le Pi
 
@@ -25,7 +25,7 @@ Après le redémarrage :
 
 Le noir initial est normal : aucune consigne n’est affichée au démarrage.
 
-## Mise à jour d’un Pi déjà installé en version 1.1
+## Mise à jour d’un Pi déjà installé en version 1.1 ou 1.2
 
 Dans SSH, avec le même compte que lors de l’installation, sans `sudo` :
 
@@ -34,7 +34,15 @@ curl -fsSL https://raw.githubusercontent.com/sylvaingeinoz/OSC-HTTP-Show-emergen
 bash update-stop-show.sh
 ```
 
-Le logiciel est sauvegardé puis remplacé. Les réglages, la sortie HDMI, le démarrage automatique et les accès SSH sont conservés. Aucun changement d’OS ni redémarrage du Pi n’est nécessaire. L’affichage est interrompu pendant la mise à jour et repart au noir ; la faire hors représentation, puis recharger la régie web. Une ancienne clé présente sur disque est ignorée.
+Cette première mise à jour ajoute les boutons OTA à la régie. Utiliser le compte de l’installation, sans `sudo`, hors représentation. Le Pi doit accéder à Internet. Le logiciel précédent est sauvegardé ; réglages, HDMI, démarrage automatique et SSH sont conservés. Aucun changement d’OS ni redémarrage du Pi n’est nécessaire. Rechargez la régie après la relance.
+
+### Les mises à jour suivantes, depuis la régie
+
+1. Dans **Mises à jour**, cliquer **Rechercher les mises à jour**.
+2. Lire la version installée et la version disponible, puis cliquer **Installer la mise à jour**.
+3. Attendre la reconnexion et le message de résultat. L’afficheur repart au noir ; renvoyer ensuite une consigne.
+
+Aucune recherche ni installation automatique. La source est exclusivement la branche `main` de ce dépôt, avec téléchargement du commit annoncé lors de la recherche. Une panne réseau laisse l’application en place. Si le nouveau service ne répond pas, le code précédent est restauré et relancé. [Fonctionnement, récupération et limites](GUIDE.md#mises-à-jour-depuis-la-régie).
 
 ### Installation depuis une copie Git
 
